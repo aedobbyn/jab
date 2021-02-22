@@ -1,8 +1,9 @@
 library(rtweet)
-library(twilio)
+library(gmailr)
 library(tidyverse)
 
 handle <- "turbovax"
+phone <- Sys.getenv("PHONE")
 
 tweets <- 
   rtweet::get_timeline(
@@ -14,7 +15,8 @@ exclude_boroughs <-
   str_c(".* only", sep = " ") %>% 
   str_c(collapse = "|")
 
-tweets %>% 
+appts <- 
+  tweets %>% 
   filter(
     str_detect(text, "^\\[") &
       !str_detect(text, exclude_boroughs)
@@ -22,18 +24,24 @@ tweets %>%
   select(text, created_at) %>% 
   separate(
     text,
-    into = c("location", "times", "site"),
+    into = c("location", "times", "url"),
     sep = "\\n\\n"
   ) %>% 
-  mutate(
+  transmute(
+    date = str_remove_all(times, "\\–.*"),
     n_appts = 
       location %>% 
       str_extract("[0-9]+ appts") %>% 
       str_remove("appts") %>% 
       str_squish() %>% 
       as.integer(),
-    location = location %>% str_remove(":.*")
+    location = location %>% str_remove(":.*"),
+    url
   ) %>% 
   mutate_all(str_squish)
+
+
+
+
 
 
